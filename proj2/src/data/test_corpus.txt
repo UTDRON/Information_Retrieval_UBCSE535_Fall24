@@ -1,0 +1,12 @@
+1	hello world
+2	hello. hi world, world. hello jack
+3	do i even know you?
+4	is it a common known thing?
+5	hello there. are you jack?
+6	lets meet at the cafe
+7	i am going to a swim meet this monday
+8	swimming is good for health
+9	hello. are you going for a swim?
+10	just random text
+11	more random text, and more text
+12	random text randomly strikes back
