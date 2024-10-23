@@ -16,6 +16,7 @@ def execute_query():
     global input_corpus
     try:
         data = request.get_json()
+        # print(type(data))
 
         if 'queries' not in data:
             return jsonify({'error': "'queries' key is missing in the payload"}), 400
@@ -27,16 +28,16 @@ def execute_query():
                                             'daatAndSkip'       : {}    
                                         }
         
-        # queries                         = data['queries']
-        queries                         = {'queries': ["hello swimming", "hello world", "random swimming", "swimming going"]}
-        concatenated_queries            = " ".join(queries['queries'])
+        queries                         = data['queries']
+        # queries                         = {'queries': ["hello swimming", "hello world", "random swimming", "swimming going"]}
+        # concatenated_queries            = " ".join(queries['queries'])
+        concatenated_queries            = " ".join(queries)
         concatenated_queries            = query_preprocessing(concatenated_queries)
         concatenated_queries            = list(concatenated_queries)
-
         result['postingsList']          = get_postings_list_without_skip(concatenated_queries, input_corpus.vocabulary_mapping)
         result['postingsListSkip']      = get_postings_list_with_skip(concatenated_queries, input_corpus.vocabulary_mapping)
 
-        for item in queries['queries']:
+        for item in queries:
             queryset                        = query_preprocessing(item)
             queryset                        = list(set(queryset))
 

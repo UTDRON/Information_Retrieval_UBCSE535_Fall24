@@ -183,8 +183,8 @@ def clean_text(text):
 
 
 def corpus_preprocessing():
-    # f                       = open("data/input_corpus.txt")
-    f                       = open("data/test_corpus.txt")
+    f                       = open("data/input_corpus.txt")
+    # f                       = open("data/test_corpus.txt")
     data                    = []
 
     for line in f:
