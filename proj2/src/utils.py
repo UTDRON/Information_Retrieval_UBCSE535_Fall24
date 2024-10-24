@@ -37,6 +37,12 @@ class PostingNode:
         self.skipped_to         = None
 
 
+class Document:
+    def __init__(self, pageId):
+        self.pageId         = pageId
+        self.score          = 0.0
+
+
 class PostingsList:
     def __init__(self):
         self.head       = None
@@ -92,7 +98,7 @@ class PostingsList:
         postings_list           = []
         running_node            = self.head
         while running_node:
-            postings_list.append(running_node.data)
+            postings_list.append(running_node)
             running_node        = running_node.next
         
         return postings_list
@@ -102,9 +108,9 @@ class PostingsList:
         running_node            = self.head
         while running_node:
             if running_node.skipped_to:
-                postings_list.append(running_node.data)
+                postings_list.append(running_node)
             elif running_node.skipped_from and running_node == self.tail:
-                postings_list.append(running_node.data)
+                postings_list.append(running_node)
 
             running_node        = running_node.next
         
@@ -164,13 +170,14 @@ class PostingsList:
         _to                             = running_node.skipped_to
         print({running_node.data: [_from.data if _from else None, _to.data if _to else None]})
 
-    def set_tf_idf(self, doc_token_count):
+    def set_tf_idf(self, doc_token_count, key):
         running_node            = self.head
         num_docs                = len(doc_token_count)
         while running_node:
             running_node.tf     = running_node.freq / doc_token_count[running_node.data]
             running_node.idf    = num_docs / self.length if self.length else 0
             running_node.tfidf  = running_node.tf * running_node.idf
+            print(key, running_node.data, running_node.freq, running_node.tf, running_node.idf, running_node.tfidf)
             running_node        = running_node.next
 
 
@@ -183,8 +190,8 @@ def clean_text(text):
 
 
 def corpus_preprocessing():
-    f                       = open("data/input_corpus.txt")
-    # f                       = open("data/test_corpus.txt")
+    # f                       = open("data/input_corpus.txt")
+    f                       = open("data/test_corpus.txt")
     data                    = []
 
     for line in f:
@@ -228,6 +235,7 @@ def get_postings_list_without_skip(queryset : set, vocabulary_mapping):
 
     return postingsList['postingsList']
 
+
 def get_postings_list_with_skip(queryset : set, vocabulary_mapping):
     postingsList = {'postingsListSkip': {}}
     for item in queryset:
@@ -241,10 +249,30 @@ def get_postings_list_with_skip(queryset : set, vocabulary_mapping):
 
 def set_tfidf(vocabulary_mapping, doc_token_count):
     for key, value in vocabulary_mapping.items():
-        value.set_tf_idf(doc_token_count)
+        value.set_tf_idf(doc_token_count, key)
+
+
+def set_document_scores(vocabulary_mapping, doc_scores):
+    for key, value in vocabulary_mapping.items():
+        running_node = value.head
+        while running_node:
+            doc_scores[running_node.data].score += running_node.tfidf
+            running_node                        = running_node.next
+
+    for page, document in doc_scores.items():
+        print(page, document.pageId, document.score)
+
+    return doc_scores
 
 
 def daat_without_skip(vocabulary_mapping, split_query : list):
+    if len(split_query) == 1:
+        return {
+                    'num_comparisons'   : 0,
+                    'num_docs'          : len(vocabulary_mapping[split_query[0]].obtain_postings_list()),
+                    'results'           : vocabulary_mapping[split_query[0]].obtain_postings_list()
+            }
+
     try:
         postings_list1                  = vocabulary_mapping[split_query[0]]
     except:
@@ -262,7 +290,8 @@ def daat_without_skip(vocabulary_mapping, split_query : list):
     
     while ptr_1 and ptr_2:
         if ptr_1.data == ptr_2.data:
-            common_postings_list.append(ptr_1.data)
+            # common_postings_list.append(ptr_1.data)
+            common_postings_list.append(ptr_1)
             ptr_1               = ptr_1.next
             ptr_2               = ptr_2.next
             num_comparisons     += 1   
@@ -284,6 +313,21 @@ def daat_without_skip(vocabulary_mapping, split_query : list):
 
 
 def daat_with_skip(vocabulary_mapping, split_query : list):
+    if len(split_query) == 1:
+        return {
+                    'num_comparisons'   : 0,
+                    'num_docs'          : len(vocabulary_mapping[split_query[0]].obtain_postings_list_with_skip()),
+                    'results'           : vocabulary_mapping[split_query[0]].obtain_postings_list_with_skip()
+            }
+    
+    '''
+    For more than two terms, its difficult to implement skip pointers because, after first MERGE operation
+    on first pair of terms we get a common postings list. Now we have to treat it as a new postings list again 
+    and then calculate skip pointers again for this list, and continue this process
+    '''
+    if len(split_query) > 2:
+        return daat_without_skip_more_than_2_terms(vocabulary_mapping, split_query )
+    
     try:
         postings_list1                  = vocabulary_mapping[split_query[0]]
     except:
@@ -301,7 +345,8 @@ def daat_with_skip(vocabulary_mapping, split_query : list):
     
     while ptr_1 and ptr_2:
         if ptr_1.data == ptr_2.data:
-            common_postings_list.append(ptr_1.data)
+            # common_postings_list.append(ptr_1.data)
+            common_postings_list.append(ptr_1)
             ptr_1               = ptr_1.next
             ptr_2               = ptr_2.next
             num_comparisons     += 1   
@@ -336,4 +381,71 @@ def daat_with_skip(vocabulary_mapping, split_query : list):
             }
 
 
+def sort_on_TfIdf(postings, doc_scores):
+    consecutive_scores = [doc_scores[ptr.data].score for ptr in postings]
+    combined = list(zip(postings, consecutive_scores))
+    combined_sorted = sorted(combined, key=lambda pair: pair[1], reverse=False)
+    sorted_postings = [pair[0] for pair in combined_sorted] 
+    return sorted_postings
 
+'''
+This is a badly implemented code, just to make it work
+for the requirement of assignment
+'''
+def daat_without_skip_more_than_2_terms(vocabulary_mapping, split_query : list):
+    if len(split_query) == 1:
+        return {
+                    'num_comparisons'   : 0,
+                    'num_docs'          : len(vocabulary_mapping[split_query[0]].obtain_postings_list()),
+                    'results'           : vocabulary_mapping[split_query[0]].obtain_postings_list()
+            }
+    
+    list_slicer                         = 0
+    sliced_list                         = split_query[list_slicer:]
+    
+    num_comparisons                     = 0
+    common_postings_list                = []
+
+    try:
+        postings_list1                  = vocabulary_mapping[split_query[0]].obtain_postings_list()
+    except:
+        postings_list1                  = None
+
+    while len(sliced_list) >= 2:
+        try:
+            postings_list2                  = vocabulary_mapping[sliced_list[1]].obtain_postings_list()
+        except:
+            postings_list2                  = None
+        
+        common_postings_list                = []
+        
+        i = 0
+        j = 0
+        
+        while i < len(postings_list1) and j < len(postings_list2):
+            if postings_list1[i].data == postings_list2[j].data:
+                # common_postings_list.append(ptr_1.data)
+                common_postings_list.append(postings_list1[i])
+                i                   += 1
+                j                   += 1
+                num_comparisons     += 1   
+
+            elif postings_list1[i].data > postings_list2[j].data:
+                j                   += 1
+                num_comparisons     += 1 
+
+            else:
+                i                   += 1
+                num_comparisons     += 1
+
+          
+        postings_list1  = [item for item in common_postings_list]
+        list_slicer     += 1
+        sliced_list     = split_query[list_slicer:]
+
+        
+    return {
+                'num_comparisons'   : num_comparisons,
+                'num_docs'          : len(common_postings_list),
+                'results'           : common_postings_list
+            }
