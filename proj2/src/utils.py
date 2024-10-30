@@ -177,7 +177,7 @@ class PostingsList:
             running_node.tf     = running_node.freq / doc_token_count[running_node.data]
             running_node.idf    = num_docs / self.length if self.length else 0
             running_node.tfidf  = running_node.tf * running_node.idf
-            print(key, running_node.data, running_node.freq, running_node.tf, running_node.idf, running_node.tfidf)
+            # print(key, running_node.data, running_node.freq, running_node.tf, running_node.idf, running_node.tfidf)
             running_node        = running_node.next
 
 
@@ -259,8 +259,8 @@ def set_document_scores(vocabulary_mapping, doc_scores):
             doc_scores[running_node.data].score += running_node.tfidf
             running_node                        = running_node.next
 
-    for page, document in doc_scores.items():
-        print(page, document.pageId, document.score)
+    # for page, document in doc_scores.items():
+    #     print(page, document.pageId, document.score)
 
     return doc_scores
 
