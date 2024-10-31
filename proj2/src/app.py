@@ -41,24 +41,28 @@ def execute_query():
         for item in queries:
             queryset                            = query_preprocessing(item)
             queryset                            = list(set(queryset))
-
+            
             result['daatAnd'][item]                 = daat_without_skip_more_than_2_terms(input_corpus.vocabulary_mapping, queryset)
             result['daatAndTfIdf'][item]            = daat_without_skip_more_than_2_terms(input_corpus.vocabulary_mapping, queryset)
 
+            # result['daatAnd'][item]                 = daat_without_skip(input_corpus.vocabulary_mapping, queryset)
+            # result['daatAndTfIdf'][item]            = daat_without_skip(input_corpus.vocabulary_mapping, queryset)
+            
             result['daatAnd'][item]['results']      = [ptr.data for ptr in result['daatAnd'][item]['results']]        
             result['daatAndTfIdf'][item]['results'] = sort_on_TfIdf(result['daatAndTfIdf'][item]['results'], doc_scores)
             result['daatAndTfIdf'][item]['results'] = [ptr.data for ptr in result['daatAndTfIdf'][item]['results']]
-
+            
             result['daatAndSkip'][item]             = daat_with_skip(input_corpus.vocabulary_mapping, queryset)
             result['daatAndSkipTfIdf'][item]        = daat_with_skip(input_corpus.vocabulary_mapping, queryset)
-
+            
             result['daatAndSkip'][item]['results']      = [ptr.data for ptr in result['daatAndSkip'][item]['results']]   
             result['daatAndSkipTfIdf'][item]['results'] = sort_on_TfIdf(result['daatAndSkipTfIdf'][item]['results'], doc_scores)
             result['daatAndSkipTfIdf'][item]['results'] = [ptr.data for ptr in result['daatAndSkipTfIdf'][item]['results']]
-
+            
         return jsonify(result), 200
     
     except Exception as e:
+        print(e)
         return jsonify({'error': str(e)}), 500
 
 

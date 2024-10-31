@@ -409,19 +409,19 @@ def daat_without_skip_more_than_2_terms(vocabulary_mapping, split_query : list):
     try:
         postings_list1                  = vocabulary_mapping[split_query[0]].obtain_postings_list()
     except:
-        postings_list1                  = None
+        postings_list1                  = []
 
     while len(sliced_list) >= 2:
         try:
             postings_list2                  = vocabulary_mapping[sliced_list[1]].obtain_postings_list()
         except:
-            postings_list2                  = None
+            postings_list2                  = []
         
         common_postings_list                = []
         
         i = 0
         j = 0
-        
+
         while i < len(postings_list1) and j < len(postings_list2):
             if postings_list1[i].data == postings_list2[j].data:
                 # common_postings_list.append(ptr_1.data)
