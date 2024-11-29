@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Bot</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="chat-container">
+        <div id="chat-box">
+            <!-- Messages will be appended here -->
+        </div>
+        <div class="input-area">
+            <input type="text" id="user-input" placeholder="Type your message...">
+            <button id="send-btn">Send</button>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            $('#send-btn').on('click', function() {
+                const userMessage = $('#user-input').val();
+                if (userMessage.trim() !== '') {
+                    $('#chat-box').append(`<div class="user-message">${userMessage}</div>`);
+                    $('#user-input').val('');
+                    $.ajax({
+                        url: '/get_response',
+                        method: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ message: userMessage }),
+                        success: function(response) {
+                            $('#chat-box').append(`<div class="bot-response">${response.response}</div>`);
+                            $('#chat-box').scrollTop($('#chat-box')[0].scrollHeight);
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
