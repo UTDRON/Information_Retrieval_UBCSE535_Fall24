@@ -20,6 +20,7 @@
 
 from flask import Flask, render_template, request, jsonify
 import requests
+from faiss_wikibot import get_top_k
 
 app = Flask(__name__)
 
@@ -49,9 +50,12 @@ def get_response():
     except requests.exceptions.RequestException as e:
         # Handle errors in the API call
         bot_response = f"Error contacting the external API: {str(e)}"
+    
+    print("asking wiki bot")
+    wiki_response = get_top_k(user_message)
 
     # return jsonify({'response': bot_response})
-    return jsonify({'response': user_message})
+    return jsonify({'response': wiki_response})
 
 if __name__ == '__main__':
     app.run(debug=True)
