@@ -3,18 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Bot</title>
+    <title>Chat Bot with Categories</title>
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    <div class="chat-container">
-        <div id="chat-box">
-            <!-- Messages will be appended here -->
+    <div class="main-container">
+        <!-- Chat Section -->
+        <div class="chat-container">
+            <div id="chat-box">
+                <!-- Messages will be appended here -->
+            </div>
+            <div class="input-area">
+                <input type="text" id="user-input" placeholder="Type your message...">
+                <button id="send-btn">Send</button>
+            </div>
         </div>
-        <div class="input-area">
-            <input type="text" id="user-input" placeholder="Type your message...">
-            <button id="send-btn">Send</button>
+
+        <!-- Categories Section -->
+        <div class="categories-container">
+            <h3>Categories</h3>
+            <label><input type="checkbox" value="Category 1"> Category 1</label>
+            <label><input type="checkbox" value="Category 2"> Category 2</label>
+            <label><input type="checkbox" value="Category 3"> Category 3</label>
+            <label><input type="checkbox" value="Category 4"> Category 4</label>
+            <label><input type="checkbox" value="Category 5"> Category 5</label>
+            <label><input type="checkbox" value="Category 6"> Category 6</label>
+            <label><input type="checkbox" value="Category 7"> Category 7</label>
+            <label><input type="checkbox" value="Category 8"> Category 8</label>
+            <label><input type="checkbox" value="Category 9"> Category 9</label>
+            <label><input type="checkbox" value="Category 10"> Category 10</label>
         </div>
     </div>
 
@@ -22,6 +40,11 @@
         $(document).ready(function() {
             $('#send-btn').on('click', function() {
                 const userMessage = $('#user-input').val();
+                const selectedCategories = [];
+                $('.categories-container input:checked').each(function() {
+                    selectedCategories.push($(this).val());
+                });
+
                 if (userMessage.trim() !== '') {
                     $('#chat-box').append(`<div class="user-message">${userMessage}</div>`);
                     $('#user-input').val('');
@@ -29,7 +52,7 @@
                         url: '/get_response',
                         method: 'POST',
                         contentType: 'application/json',
-                        data: JSON.stringify({ message: userMessage }),
+                        data: JSON.stringify({ message: userMessage, categories: selectedCategories }),
                         success: function(response) {
                             $('#chat-box').append(`<div class="bot-response">${response.response}</div>`);
                             $('#chat-box').scrollTop($('#chat-box')[0].scrollHeight);
