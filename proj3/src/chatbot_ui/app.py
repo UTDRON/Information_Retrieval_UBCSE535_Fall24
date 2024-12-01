@@ -21,6 +21,9 @@
 from flask import Flask, render_template, request, jsonify
 import requests
 from faiss_wikibot import get_top_k
+import time
+import psycopg2
+# import pg8000
 
 app = Flask(__name__)
 
@@ -33,7 +36,7 @@ def index():
 
 
 def get_topics(query):
-    topic_url = "topic url"
+    topic_url = "http://34.122.76.122:9999/classify_query"
     payload = {
         "query": query,
         "multi_topic": True
@@ -50,10 +53,35 @@ def get_topics(query):
     else:
         response_data = f"Failed with status code {response.status_code}: {response.text}"
     
-    return response_data
+    return response_data["topics"]
+
+
+def writeToDatabase(topics, execution_time):
+    conn = psycopg2.connect(
+        dbname="postgres",
+        user="postgres",
+        password="pratiktt",
+        host="34.169.90.241",
+        port="5432"
+    )
+    cursor = conn.cursor()
+
+    try:
+        for topic in topics:
+            new_data = [(topic, execution_time)]
+            insert_query = "INSERT INTO chatlogs (msg_type, response_time) VALUES (%s, %s)"
+            cursor.executemany(insert_query, new_data)
+        conn.commit()
+    except:
+        print("XXXXXX________________________Issue in Writing to db________________________XXXXXX")
+        
+    cursor.close()
+    conn.close()
+
 
 @app.route('/get_response', methods=['POST'])
 def get_response():
+    start_time = time.time()
     user_message = request.json.get('message', '')
     selected_categories = request.json.get('categories', [])
     
@@ -64,13 +92,19 @@ def get_response():
 
     if not selected_categories:
         topic = get_topics(user_message)
-        print(topic)
+        print("CLASSIFIED/ANALYZED CATEGORIES:", topic, type(topic))
+    else:
+        topic = selected_categories
+        print("SELECTED CATEGORIES: ",topic)
 
     try:
         wiki_response = get_top_k(user_message)
     except:
         wiki_response = "sorry, i don't know about "+ user_message
 
+    end_time = time.time()
+    execution_time = end_time - start_time
+    writeToDatabase(topic, execution_time)
     return jsonify({'response': wiki_response})
 
 if __name__ == '__main__':
