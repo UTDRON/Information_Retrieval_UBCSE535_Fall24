@@ -2,19 +2,14 @@ import json
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 import torch
-import faiss
 import numpy as np
 import re
-import gensim
 import os
-from gensim import corpora
+import anthropic
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.preprocessing import StandardScaler
-import sys
-import anthropic
-
-import os
+from sklearn.metrics.pairwise import cosine_similarity
 import multiprocessing
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -28,39 +23,24 @@ def get_top_k(query):
     input_df = pd.read_json(input_file)
 
     summaries = input_df['title'].tolist()
-    print("asking wiki bot2")
 
-    dim                                 = 384
-    # torch_device                        = 'cuda' if torch.cuda.is_available() else 'cpu'
-    torch_device                        = 'cpu'
+    # dim                                 = 384
+    torch_device                        = 'cuda' if torch.cuda.is_available() else 'cpu'
     encoder                             = SentenceTransformer('paraphrase-MiniLM-L6-v2', device = torch_device)
 
+    # scaler                              = StandardScaler()
     attributes_embeddings               = np.load(src_directory + "data/title_embeddings.npy")
-
-    k_nearest                           = 4
-    series                              = pd.Series(summaries)
-    index_values                        = series.index.values
-    db_vectors                          = attributes_embeddings.copy().astype(np.float32)
-    db_ids                              = np.array(index_values, dtype=np.int64)
-
-    faiss.normalize_L2(db_vectors)
-    index                               = faiss.IndexFlatIP(dim)
-    index                               = faiss.IndexIDMap(index)
-    index.add_with_ids(db_vectors,db_ids)
-
-    
     query_embeddings                    = encoder.encode([query],device = torch_device)
 
+    similarities = cosine_similarity(query_embeddings, attributes_embeddings)
+    similarities = similarities.flatten()
 
-    search_query                        = query_embeddings.copy().astype(np.float32)
-    faiss.normalize_L2(search_query)
-    similarities, similarities_ids      = index.search(search_query, k=k_nearest)
-    similarities                        = np.around(np.clip(similarities,0,1),decimals = 4)
-    print("similarity values:", similarities)
+    top_indices = np.argsort(similarities)[-4:][::-1]  
+    top_similarities = similarities[top_indices]
+    print("similarity values:", top_similarities)
 
-    top_k_ids = similarities_ids[0]
     top_k_docs = ""
-    for item in top_k_ids:
+    for item in top_indices:
         top_k_docs += input_df['summary'][item] + "\n"
         print(input_df['title'][item], " :\n", input_df['summary'][item], end = "\n \n")
     
@@ -78,17 +58,19 @@ def get_top_k(query):
             {"role": "user", "content": description}
         ]
     )
-    # print(response.content[0].text)
     
-    del index
+    del summaries
     del attributes_embeddings
+    del encoder
+    del input_df
+    del query_embeddings
+    del similarities
 
     return response.content[0].text
 
-# print(get_top_k("tell me about politics in india")) 
-if __name__ == "__main__":
-    multiprocessing.set_start_method("spawn", force=True)
-
+    
+    
+    
 
 
     

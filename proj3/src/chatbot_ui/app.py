@@ -25,36 +25,52 @@ from faiss_wikibot import get_top_k
 app = Flask(__name__)
 
 # Replace <ip>:<port> with the actual IP and port of the external API
-API_URL = "http://<ip>:<port>"
+# API_URL = "http://<ip>:<port>"
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
+
+def get_topics(query):
+    topic_url = "topic url"
+    payload = {
+        "query": query,
+        "multi_topic": True
+    }
+
+    try:
+        response = requests.post(topic_url, json=payload)
+        response_data = response.json()
+    except requests.exceptions.RequestException as e:
+        response_data = f"Error contacting the topic model: {str(e)}"
+
+    if response.status_code == 200:
+        print("Response:", response_data)
+    else:
+        response_data = f"Failed with status code {response.status_code}: {response.text}"
+    
+    return response_data
 
 @app.route('/get_response', methods=['POST'])
 def get_response():
     user_message = request.json.get('message', '')
     selected_categories = request.json.get('categories', [])
     
-    # Format the data for the external API
     payload = {
         "message": user_message,
         "topics": selected_categories
     }
 
-    try:
-        # Make the API call to the external service
-        response = requests.post(API_URL, json=payload, timeout=5)
-        response_data = response.json()
-        bot_response = response_data.get('response', 'No response received from API.')
-    except requests.exceptions.RequestException as e:
-        # Handle errors in the API call
-        bot_response = f"Error contacting the external API: {str(e)}"
-    
-    print("asking wiki bot")
-    wiki_response = get_top_k(user_message)
+    if not selected_categories:
+        topic = get_topics(user_message)
+        print(topic)
 
-    # return jsonify({'response': bot_response})
+    try:
+        wiki_response = get_top_k(user_message)
+    except:
+        wiki_response = "sorry, i don't know about "+ user_message
+
     return jsonify({'response': wiki_response})
 
 if __name__ == '__main__':
