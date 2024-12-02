@@ -1,34 +1,10 @@
-# from flask import Flask, render_template, request, jsonify
-
-# app = Flask(__name__)
-
-# @app.route('/')
-# def index():
-#     return render_template('index.html')
-
-# @app.route('/get_response', methods=['POST'])
-# def get_response():
-#     user_message = request.json.get('message', '')
-#     selected_categories = request.json.get('categories', [])
-#     categories_text = ', '.join(selected_categories)
-#     response = f"{user_message} [Selected Categories: {categories_text}]"
-#     return jsonify({'response': response})
-
-# if __name__ == '__main__':
-#     app.run(debug=True)
-
-
 from flask import Flask, render_template, request, jsonify
 import requests
 from faiss_wikibot import get_top_k
 import time
 import psycopg2
-# import pg8000
 
 app = Flask(__name__)
-
-# Replace <ip>:<port> with the actual IP and port of the external API
-# API_URL = "http://<ip>:<port>"
 
 @app.route('/')
 def index():
@@ -54,6 +30,61 @@ def get_topics(query):
         response_data = f"Failed with status code {response.status_code}: {response.text}"
     
     return response_data["topics"]
+
+
+@app.route('/get_chart_data', methods=['GET'])
+def get_chart_data():
+    conn = psycopg2.connect(
+        dbname="postgres",
+        user="postgres",
+        password="pratiktt",
+        host="34.169.90.241",
+        port="5432"
+    )
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT msg_type, response_time FROM chatlogs")
+        rows = cursor.fetchall()
+        conn.commit()
+
+        category_counts = {}
+        response_time_sums = {}
+        response_time_counts = {}
+
+        for row in rows:
+            category = row[0].strip().lower()
+            response_time = float(row[1])
+            
+            # Count occurrences
+            if category not in category_counts:
+                category_counts[category] = 0
+                response_time_sums[category] = 0
+                response_time_counts[category] = 0
+            
+            category_counts[category] += 1
+            response_time_sums[category] += response_time
+            response_time_counts[category] += 1
+
+        average_response_times = {
+            category: response_time_sums[category] / response_time_counts[category]
+            for category in response_time_sums
+        }
+
+        data = {
+            "categories": list(category_counts.keys()),
+            "counts": list(category_counts.values()),
+            "average_response_times": list(average_response_times.values())
+        }
+
+        return jsonify(data)
+
+    except Exception as e:
+        return jsonify({"error": str(e)})
+    finally:
+        cursor.close()
+        conn.close()
+
 
 
 def writeToDatabase(topics, execution_time):
@@ -105,7 +136,8 @@ def get_response():
     end_time = time.time()
     execution_time = end_time - start_time
     writeToDatabase(topic, execution_time)
-    return jsonify({'response': wiki_response})
+    return jsonify({'response': wiki_response, 'topics': topic})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)

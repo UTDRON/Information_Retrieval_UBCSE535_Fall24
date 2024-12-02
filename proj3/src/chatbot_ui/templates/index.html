@@ -8,6 +8,13 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
+    <!-- Charts Section -->
+    <div class="charts-container">
+        <canvas id="bar-chart"></canvas>
+        <canvas id="line-chart"></canvas>
+    </div>
+
+    <!-- Main Chat Interface -->
     <div class="main-container">
         <!-- Chat Section -->
         <div class="chat-container">
@@ -23,19 +30,79 @@
         <!-- Categories Section -->
         <div class="categories-container">
             <h3>Topics</h3>
-            <label><input type="checkbox" value="Economy"> Economy</label>
-            <label><input type="checkbox" value="Technology"> Technology</label>
-            <label><input type="checkbox" value="Health"> Health</label>
-            <label><input type="checkbox" value="Food"> Food</label>
-            <label><input type="checkbox" value="Education"> Education</label>
-            <label><input type="checkbox" value="Environment"> Environment</label>
-            <label><input type="checkbox" value="Politics"> Politics</label>
-            <label><input type="checkbox" value="Sports"> Sports</label>
-            <label><input type="checkbox" value="Entertainment"> Entertainment</label>
-            <label><input type="checkbox" value="Travel"> Travel</label>
+            <label><input type="checkbox" value="economy"> Economy</label>
+            <label><input type="checkbox" value="technology"> Technology</label>
+            <label><input type="checkbox" value="health"> Health</label>
+            <label><input type="checkbox" value="food"> Food</label>
+            <label><input type="checkbox" value="education"> Education</label>
+            <label><input type="checkbox" value="environment"> Environment</label>
+            <label><input type="checkbox" value="politics"> Politics</label>
+            <label><input type="checkbox" value="sports"> Sports</label>
+            <label><input type="checkbox" value="entertainment"> Entertainment</label>
+            <label><input type="checkbox" value="travel"> Travel</label>
         </div>
     </div>
 
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        $(document).ready(function() {
+            $.ajax({
+                url: '/get_chart_data',
+                method: 'GET',
+                success: function(data) {
+                    const ctxBar = document.getElementById('bar-chart').getContext('2d');
+                    const ctxLine = document.getElementById('line-chart').getContext('2d');
+
+                    // Bar Chart for Category Counts
+                    new Chart(ctxBar, {
+                        type: 'bar',
+                        data: {
+                            labels: data.categories,
+                            datasets: [{
+                                label: 'Total Occurrences',
+                                data: data.counts,
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+
+                    // Line Chart for Average Response Times
+                    new Chart(ctxLine, {
+                        type: 'line',
+                        data: {
+                            labels: data.categories,
+                            datasets: [{
+                                label: 'Average Response Time',
+                                data: data.average_response_times,
+                                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                                borderColor: 'rgba(153, 102, 255, 1)',
+                                borderWidth: 1,
+                                fill: false,
+                                tension: 0.1
+                            }]
+                        },
+                        options: {
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        });
+    </script>
     <script>
         $(document).ready(function() {
             $('#send-btn').on('click', function() {
@@ -44,7 +111,7 @@
                 $('.categories-container input:checked').each(function() {
                     selectedCategories.push($(this).val());
                 });
-
+    
                 if (userMessage.trim() !== '') {
                     $('#chat-box').append(`<div class="user-message">${userMessage}</div>`);
                     $('#user-input').val('');
@@ -54,13 +121,24 @@
                         contentType: 'application/json',
                         data: JSON.stringify({ message: userMessage, categories: selectedCategories }),
                         success: function(response) {
+                            // Append bot response to chat box
                             $('#chat-box').append(`<div class="bot-response">${response.response}</div>`);
                             $('#chat-box').scrollTop($('#chat-box')[0].scrollHeight);
+    
+                            // Update checkboxes based on topics received from backend
+                            const topics = response.topics;
+                            $('.categories-container input').prop('checked', false); // Uncheck all initially
+                            topics.forEach(function(topic) {
+                                $(`.categories-container input[value="${topic}"]`).prop('checked', true);
+                            });
                         }
                     });
                 }
             });
         });
     </script>
+    
 </body>
 </html>
+
+
