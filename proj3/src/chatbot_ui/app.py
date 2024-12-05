@@ -31,6 +31,24 @@ def get_topics(query):
     
     return response_data["topics"]
 
+def get_chitchat(query):
+    
+    chitchat_url = "http://34.23.122.204:5000/chat"
+    payload = {
+        "input": query
+    }
+    try:
+        response = requests.post(chitchat_url, json = payload)
+        response_data = response.json()
+    except requests.exceptions.RequestException as e:
+        response_data = f"Error contacting the classifier model: {str(e)}"
+
+    if response.status_code == 200:
+        print("Response:", response_data)
+    else:
+        response_data = f"Failed with status code {response.status_code}: {response.text}"
+    
+    return response_data
 
 @app.route('/get_chart_data', methods=['GET'])
 def get_chart_data():
@@ -116,10 +134,26 @@ def get_response():
     user_message = request.json.get('message', '')
     selected_categories = request.json.get('categories', [])
     
-    payload = {
-        "message": user_message,
-        "topics": selected_categories
-    }
+    # payload = {
+    #     "message": user_message,
+    #     "topics": selected_categories
+    # }
+
+    chitchat_response = get_chitchat(user_message)
+    if "hello" in user_message or "hi" in user_message or "bye" in user_message or "good" in user_message or "plan" in user_message or "you" in user_message:
+        try:
+            bot_message = chitchat_response["response"]
+            message_type = chitchat_response["type"]
+            if message_type == "chitchat":
+                end_time = time.time()
+                execution_time = end_time - start_time
+                writeToDatabase(['chitchat'], execution_time)
+                return jsonify({'response': bot_message, 'topics': ['chitchat']})
+        except:
+            if "Failed" in chitchat_response or "Error" in chitchat_response:
+                failure_response = "sorry, i don't know about "+ user_message
+                return jsonify({'response': failure_response, 'topics': selected_categories})
+
 
     if not selected_categories:
         topic = get_topics(user_message)
@@ -139,5 +173,5 @@ def get_response():
     return jsonify({'response': wiki_response, 'topics': topic})
 
 if __name__ == '__main__':
-    # app.run(debug=True)
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True)
+    # app.run(host='0.0.0.0', port=6000)
